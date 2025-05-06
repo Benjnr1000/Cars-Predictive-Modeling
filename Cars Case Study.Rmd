@@ -1,0 +1,1024 @@
+---
+title: "Cars Case Study"
+author: "Benedict Egwuchukwu"
+date: "10/2/2020"
+output:
+  pdf_document:
+    toc: TRUE
+    toc_depth: 4
+  html_document:
+    toc: TRUE
+    toc_depth: 4
+  word_document:
+    toc: TRUE
+    toc_depth: 4
+---
+
+## 1. Project Objective
+
+This project requires an understanding of what mode of transport employees prefers to commute to their office. The dataset "Cars-dataset" includes employee information about their mode of transport as well as their personal and professional details like age, salary, work exp. We need to predict whether or not an employee will use Car as a mode of transport. Also, which variables are a significant predictor behind this decision.
+
+The following will be carried out through the assessment.
+
+* Perform an EDA on the data
+* Illustrate the insights based on EDA
+* What is the most challenging aspect of this problem? What method will you use to deal with this? Comment
+* Prepare the data for analysis
+* Create multiple models and explore how each model perform using appropriate model performance metrics
+  * KNN 
+  * Naive Bayes (is it applicable here? comment and if it is not applicable, how can you build an NB model in this case?)
+  * Logistic Regression
+* Apply both bagging and boosting modeling procedures to create 2 models and compare its accuracy with the best model of the above step.
+* Summarize your findings from the exercise in a concise yet actionable note
+
+## 2. Exploratory Data Analysis (EDA) - Step by step approach
+
+``` {r echo=FALSE}
+#======================================================================= 
+# 
+# Exploratory Data Analysis - CardioGoodFitness 
+# 
+#=======================================================================
+```
+
+### 2.1 Environment Set up and Data Import
+
+#### 2.1.1 Install necessary packages and load libraries
+
+```{r, warning=FALSE, message=FALSE}
+# Environment set up and data import
+
+# Invoking libraries
+library(readr) # To import csv files
+library(ggplot2) # To create plots
+library(corrplot) # To plot correlation plot between numerical variables
+library(gridExtra) # To plot multiple ggplot graphs in a grid
+library(DataExplorer) # visual exploration of data
+library(caTools) # Split Data into Test and Train Set
+library(caret) # for confusion matrix function
+library(randomForest) # to build a random forest model
+library(rpart) # to build a decision model
+library(rattle) 
+library(gbm) # basic implementation using AdaBoost
+library(xgboost) # to build a XGboost model
+library(DMwR) # for sMOTE
+library(knitr) # Necessary to generate source codes from a .Rmd File
+library(markdown) # To convert to HTML
+library(rmarkdown) # To convret analyses into high quality documents
+```
+
+#### 2.1.2 Set up Working Directory
+
+```{r,warning=FALSE, message=FALSE}
+# Set working directory 
+setwd("C:/Users/egwuc/Desktop/PGP-DSBA-UT Austin/Machine Learning/Week 5 - Project/")
+```
+
+#### 2.1.3 Import and Read the Dataset
+
+```{r,warning=FALSE, message=FALSE}
+# Read input file
+cars_dataset <- read.csv("Cars-dataset.csv")
+```
+
+#### 2.1.4 Global Options Settings
+
+```{r}
+# Global options settings
+options(scipen = 999) # turn off scientific notation like 1e+06
+```
+
+### 2.2 Variable Identification
+
+In order for us to get familiar with the Cardio Good Fitness data, we would be using the following functions to get an overview
+
+1. dim(): this gives us the dimension of the dataset provided. Knowing the data dimension gives us an idea of how large the data is. 2. head(): this shows the first 6 rows(observations) of the dataset. It is essential for us to get a glimpse of the dataset in a tabular format without revealing the entire dataset if we are to properly analyse the data. 
+3. tail(): this shows the last 6 rows(observations) of the dataset. Knowing what the dataset looks like at the end rows also helps us ensure the data is consistent. 
+4. str(): this shows us the structure of the dataset. It helps us determine the datatypes of the features and identify if there are datatype mismatches, so that we handle these ASAP to avoid inappropriate results from our analysis. 
+5. summary(): this provides statistical summaries of the dataset. This function is important as we can quickly get statistical summaries (mean,median, quartiles, min, frequencies/counts, max values etc.) which can help us derive insights even before diving deep into the data.
+6. View(): helps to look at the entire dataset at a glance.
+
+#### 2.2.1 Insight(s) from dim():
+
+```{r}
+# Check dimension of dataset 
+dim(cars_dataset)
+```
+
+* The dataset has 418 rows and 9 columns.
+
+#### 2.2.2 Insight(s) from head() and tail():
+
+```{r}
+# Check first 6 rows(observations) of dataset
+head(cars_dataset)
+tail(cars_dataset)
+```
+
+* There are 9 variables.
+* Columns names are appropriate.
+* Values in all fields are consistent in each column.
+
+#### 2.2.3 Insight(s) from str():
+
+```{r}
+# Check structure of dataset
+str(cars_dataset)
+```
+
+* Age, Engineer, MBA, Work.Exp and License are integer variables.
+* Salary and Distance are numerical variables.
+* Gender and Transport are factor variables.
+
+#### 2.2.4 Insight(s) from summary():
+
+```{r}
+# Get summary of dataset
+summary(cars_dataset)
+```
+
+* The age variable ranges from a minimum value of 18 to a maximum value of 43 with a mean and median of 27.3 and 27.0 respectively.
+* In terms of gender, female accounted for 121 while male accounted for 297.
+* Number of employees with engineering degree indicated with 1 is 313 while those without engineering degree indicated with 0 is 105. 
+* Number of employees with MBA indicated with 1 is 109 while those without MBA indicated with 0 is 308. There is a missing value which must be treated.
+* Work experience in years ranges from a minimum value of 0 to a maximum value of 24. Mean and median is 5.9 and 5.0 respectively.
+* Annual salary of employees (in thousand) ranges from a minimum value of 6.5 to a maximum value of 57. Mean and median is 15.4 and 13.0 respectively.
+* Distance from office (in KM) ranges from a minimum value of 3.2 to a maximum value of 23.4. Mean and median is 11.3 and 10.9 respectively.
+* Number of employees with a license inidcated with 1 is 85 while those without a license indicated with 0 is 333.
+* The transport variable is divided into 3 namely "2Wheeler", "Car" and "Public Transport". 71.8% of employees use Public Transport, 19.9% use 2Wheeler while 8.3% use car.
+
+#### 2.2.5 Missing Data Treatment
+
+```{r}
+# How many missing vaues do we have?
+sum(is.na(cars_dataset)) 
+```
+
+```{r}
+# What columns contain missing values?
+colSums(is.na(cars_dataset))
+```
+
+```{r}
+# Impute the missing value with the column mean/median
+data1 = cars_dataset
+data1$MBA[is.na(data1$MBA)] <- median(data1$MBA, na.rm = T)
+dim(data1)
+cars_dataset <- data1
+sum(is.na(cars_dataset))
+```
+
+```{r}
+# Change Engineer, MBA and license to factor variable
+cars_dataset$Engineer <- as.factor(cars_dataset$Engineer)
+cars_dataset$MBA <- as.factor(cars_dataset$MBA)
+cars_dataset$license <- as.factor(cars_dataset$license)
+```
+
+#### 2.2.7 Insight(s) from View():
+
+```{r}
+# View the dataset 
+View(cars_dataset)
+```
+
+* The dataset shows employee information about their mode of transport as well as their personal and professional details.
+
+### 2.3 Univariate Analysis
+
+```{r}
+# Distribution of the dependent variable
+prop.table(table(cars_dataset$Transport))*100
+```
+
+* Under the transport variable, 71.77% of employees use public transport, 19.86% use 2Wheeler while 8.37% use car as a mode of transport.
+
+```{r}
+plot_histogram_n_boxplot = function(variable, variableNameString, binw){
+  
+  a <- ggplot(data = cars_dataset, aes(x = variable)) +
+    labs(x = variableNameString, y = 'count')+
+    geom_histogram(fill = 'green', col = 'white', binwidth = binw) +
+    geom_vline(aes(xintercept = mean(variable)),
+               color = "black", linetype = "dashed", size = 0.5)
+  
+  b <- ggplot(data = cars_dataset, aes('',variable))+ 
+    geom_boxplot(outlier.colour = 'red', col = 'red', outlier.shape = 19)+
+    labs(x = '', y = variableNameString) + coord_flip()
+  grid.arrange(a,b,ncol = 2)
+}
+```
+
+1. Observations on Age
+
+```{r}
+plot_histogram_n_boxplot(cars_dataset$Age, 'Age', 2)
+```
+
+* It is slightly uniform though it is skewed to the right. There are few outliers.
+
+2. Observations on WorkExp
+
+```{r}
+plot_histogram_n_boxplot(cars_dataset$Work.Exp, 'Work Experience', 2)
+```
+
+* It is skewed to the right. There are few outliers.
+
+3. Observations on Salary
+
+```{r}
+plot_histogram_n_boxplot(cars_dataset$Salary, 'Salary', 5)
+```
+
+* It is skewed to the right. There are numerous outliers.
+
+4. Observations on Distance
+
+```{r}
+plot_histogram_n_boxplot(cars_dataset$Distance, 'Distance', 2)
+```
+
+* There is a uniform distribution. There are few outliers.
+
+### 2.4 Bivariate Analysis
+
+Plot bivariate charts between variables to understand their relationship with each other.
+
+1. Relationship between Transport and Gender
+
+```{r}
+ggplot(cars_dataset, aes(x = Gender, fill = Transport)) + 
+  geom_bar(position = "dodge") + 
+  labs(y = "Count", 
+       fill = "Transport",
+       x = "Gender",
+       title = "Gender by Transport") +
+  theme_minimal()
+```
+
+* Data reveals across all modes of transport that male employees usage rate is higher compared to female employees.
+* Female employees have a lower usage rate of the transport available. Possible reasons include an alternative mode of transport and female employees live closer to work than their male counterpart.  
+* Public transport is more common among both gender, trailed by 2Wheeler and car.
+
+2. Relationship between Transport and Engineer
+
+```{r}
+ggplot(cars_dataset, aes(x = Engineer, fill = Transport)) + 
+  geom_bar(position = "dodge") + 
+  labs(y = "Count", 
+       fill = "Transport",
+       x = "Engineer",
+       title = "Engineer by Transport") +
+  theme_minimal()
+```
+
+* Across all modes of transport, employees with an engineering degree have a higher usage rate compared to employees without an engineering degree.
+* Similar to gender, public transport is more common among employees with/without an engineering degree. Trailing is 2Wheeler and car.
+
+3. Relationship between Transport and MBA
+
+```{r}
+ggplot(cars_dataset, aes(x = MBA, fill = Transport)) + 
+  geom_bar(position = "dodge") + 
+  labs(y = "Count", 
+       fill = "Transport",
+       x = "MBA",
+       title = "MBA by Transport") +
+  theme_minimal()
+```
+
+* Across all modes of transport, employees without an MBA have a higher usage rate compared to employees with an MBA.
+* Similar to gender and engineer, public transport is more common with employees with/without an MBA. This is trailed by 2Wheeler and car.
+
+4.Relationship between Transport and License
+
+```{r}
+ggplot(cars_dataset, aes(x = license, fill = Transport)) + 
+  geom_bar(position = "dodge") + 
+  labs(y = "Count", 
+       fill = "Transport",
+       x = "License",
+       title = "License by Transport") +
+  theme_minimal()
+```
+
+* Across all modes of transport except car, data reveals that employees without a license have a higher usage rate compared to employees with a license.
+* This should be the case given that a license is required to drive a car. Therefore, it is reasonable for employees without a license to use a 2Wheeler and public transport.
+* However, the data suggests some employees have access to a car in the absence of a license. A possible reason could be employees are awaiting license approval or renewal.
+
+#### 2.4.2 Correlation Plot between Numerical Variables
+
+Plot bivariate charts between variables to understand their relationship with each other.
+
+Check for correlation among numerical variables
+
+```{r}
+# Numeric variables in the data
+num_vars = sapply(cars_dataset, is.numeric)
+
+# Correlation Plot
+corrplot(cor(cars_dataset[,num_vars]), method = 'number')
+```
+
+* There is a high correlation between age and work experience. As an individual grows older, there is a tendency to gain more years of work experience.
+* There is a high correlation between age and salary. 
+* There is a high correlation between work experience and salary. The likelihood that an employee's salary increases with respect to a higher work experience is high.  
+
+### 2.5 The Problem
+
+The case requires us to determine the factors that influence an employees decision to use a car as a mode of transport. In order to achieve this, we have to understand the factors that will cause an employee to use a car or not use a car. The dataset presented has a transport variable with three levels namely "2Wheeler", "Car" and "Public Transport". Since the objective is to predict an employees decision to use a car, we will create a new column (Carusage) segmenting employees mode of transport to "car" or "not car". Under the "Carusage" variable, we will ascribe the word "Car" to employees who use "Car" while the word "Not Car" to employees who use "2Wheeler" and "Public Transport".
+
+```{r}
+# Distribution of the Transport variable
+prop.table(table(cars_dataset$Transport))*100
+```
+
+```{r}
+# Adding a new column titled "Carusage"
+# Given we want to determine employees who use a car or not, we will use 
+# "Car" to represent "Car" and "Not Car" to represent "2Wheeler" and "Public Transport".
+cars_dataset$Carusage <- ifelse(cars_dataset$Transport == "Car", "Car", "Not.Car")
+table(cars_dataset$Carusage)
+prop.table(table(cars_dataset$Carusage))*100
+```
+
+From the above, the proportion of employees using a car as a mode of transport is 8.37% compared to 91.63% of employees not using a car. The data reveals that the number of employees using a car is in the minority. This poses an imbalance problem given that the aim of this report is to accurately predict whether or not an employee will use Car as a mode of transport. In order to solve this, we will use a methodology known as Synthetic Minority Over-sampling Technique (SMOTE). 
+
+```{r}
+# The Carusage variable needs to be converted to a factor variable  
+cars_dataset$Carusage <- as.factor(cars_dataset$Carusage)
+summary(cars_dataset)
+```
+
+## 3.Data Preparation
+
+```{r}
+# Remove the Transport variable
+cars_dataset <- cars_dataset[,-9]
+view(cars_dataset)
+```
+
+```{r}
+# Split the data into train and test 
+set.seed(123)
+carsdataset_index <- createDataPartition(cars_dataset$Carusage, p = 0.70, list = FALSE)
+
+carsdataset_train <- cars_dataset[carsdataset_index,]
+carsdataset_test <- cars_dataset[-carsdataset_index,]
+
+prop.table(table(cars_dataset$Carusage))*100
+prop.table(table(carsdataset_train$Carusage))*100
+prop.table(table(carsdataset_test$Carusage))*100
+```
+
+* The train and test dataset have almost the same car usage percentage as the base dataset.
+
+```{r}
+# Apply SMOTE on the Train dataset
+table(carsdataset_train$Carusage)
+prop.table(table(carsdataset_train$Carusage))*100
+
+smote_carsdataset_train <- SMOTE(Carusage ~ ., data = carsdataset_train,
+                     perc.over = 500,
+                     perc.under = 200,
+                     k = 5)
+
+table(smote_carsdataset_train$Carusage)
+prop.table(table(smote_carsdataset_train$Carusage))*100
+
+# perc.over	
+# how many extra cases from the minority class are generated (known as over-sampling)
+
+# smoted_minority_class = perc.over/100 * minority_class_cases + minority_class_cases
+
+# perc.under	
+# how many extra cases from the majority classes are selected for each case generated from the minority class (known as under-sampling)
+
+# k: number of nearest neighbours that are used to generate the new examples of the minority class.
+```
+
+* After applying SMOTE, we have a 37.5:62.5 split in the dataset between car users and non car users.
+
+## 4. Model Building
+
+### 4.1 Setting up the general parameters for training multiple models
+
+```{r}
+# Define the training control
+fitControl <- trainControl(
+              method = 'repeatedcv',           # k-fold cross validation
+              number = 3,                      # number of folds or k
+              repeats = 1,                     # repeated k-fold cross-validation
+              allowParallel = TRUE,
+              classProbs = TRUE,
+              summaryFunction = twoClassSummary # should class probabilities be returned
+    ) 
+```
+
+### 4.2 Model_1: KNN 
+
+```{r}
+knn_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                   preProcess = c("center", "scale"),
+                   method = "knn",
+                   tuneLength = 3,
+                   trControl = fitControl)
+knn_model
+```
+
+#### 4.2.1 Predict using the trained model & check performance on test set
+
+```{r}
+knn_prediction_test <- predict(knn_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(knn_prediction_test, carsdataset_test$Carusage)
+```
+
+* Accuracy : 97.6%
+
+* Sensitivity : 80.0%     
+
+* Specificity : 99.1%
+
+* The accuracy of prediction is 97.5% with almost all non-users of a car predicted accurately. On the other hand, there is an 80.0% accuracy in predicting employees that will use a car. 
+
+* From the above metrics we can conclude that KNN is performing very well on the data and is able to differentiate between employees using a car and those not using a car.
+
+#### 4.2.2 KNN Variable Importance
+
+```{r}
+varImp(object = knn_model)
+plot(varImp(object = knn_model))
+```
+
+* The most important variables influencing an employee's decision to use a car or not are salary, age, work experience, distance and license. 
+
+### 4.3 Model_2: Naive Bayes
+
+```{r}
+nb_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                 method = "naive_bayes",
+                 trControl = fitControl)
+
+summary(nb_model)
+```
+
+#### 4.3.1 Predict using the trained model & check performance on test set
+
+```{r}
+nb_prediction_test <- predict(nb_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(nb_prediction_test, carsdataset_test$Carusage)
+```
+
+* Accuracy : 97.6%
+
+* Sensitivity : 90.0%     
+
+* Specificity : 98.2%
+
+* The accuracy of prediction is 97.5% with almost all non-users of a car predicted accurately. On the other hand, there is a 90.0% accuracy in predicting employees that will use a car. 
+
+* Naives Bayes is applicable in this case and surprisingly performs better than KNN on the data. It is capable of differentiating between those using a car and not using a car.
+
+#### 4.3.2 Naive-Bayes Variable Importance
+
+```{r}
+varImp(object = nb_model)
+plot(varImp(object = nb_model))
+```
+
+* Similar to KNN, the most important variables here are salary, age, work experience, distance and license.
+
+### 4.4 Model_3: GLM: Simple Logistic Regression Model
+
+```{r, warning=FALSE, message=FALSE}
+slr_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                 method = "glm",
+                 family = "binomial",
+                 trControl = fitControl)
+
+summary(slr_model)
+```
+
+#### 4.4.1 Predict using the trained model & check performance on test set
+
+```{r}
+slr_prediction_test <- predict(slr_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(slr_prediction_test, carsdataset_test$Carusage)
+
+# se"N"sitivity : True "P"ositive rate
+# s"P"ecificity : True "N"egative rate
+```
+
+* Accuracy : 98.4%
+
+* Sensitivity : 90.0%     
+
+* Specificity : 99.1%
+
+* The accuracy of prediction is 98.4% with almost all non-users of a car predicted accurately. On the other hand, there is a 90.0% accuracy in predicting employees that will use a car. 
+
+* Thus far, the logistic regression model performs better than the KNN and Naives Bayes models. It is capable of differentiating between those using a car and not using a car.
+
+#### 4.4.2 Logistic Regression Variable Importance
+
+```{r}
+varImp(object = slr_model)
+plot(varImp(object = slr_model))
+```
+
+* Unlike KNN and Naive Bayes, and using a threshold of 70, the most important variable influencing an employee's decision to use a car or not is distance.
+
+### 4.5 Model_4: Bagging - Random Forest
+
+```{r}
+rf_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                     method = "rf",
+                     ntree = 30,
+                     maxdepth = 5,
+                     tuneLength = 10,
+                     trControl = fitControl)
+```
+
+#### 4.5.1 Predict using the trained model & check performance on test set
+
+```{r}
+rf_prediction_test <- predict(rf_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(rf_prediction_test, carsdataset_test$Carusage)
+```
+
+* Accuracy : 100.0%
+
+* Sensitivity : 100.0%     
+
+* Specificity : 100.0%
+
+* The accuracy of prediction is 100.0% with all non-users of a car predicted accurately. Similarly, there is a 100.0% accuracy in predicting employees that will use a car. 
+
+#### 4.5.2 Random Forest Variable Importance
+
+```{r}
+varImp(object = rf_model)
+plot(varImp(object = rf_model))
+```
+
+* Here, the most important variables using a threshold of 70 include work experience, age and salary. 
+
+### 4.6 Model_5: Gradient Boosting Machines
+
+```{r}
+gbm_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                     method = "gbm",
+                     trControl = fitControl,
+                     verbose = FALSE)
+```
+
+#### 4.6.1 Predict using the trained model & check performance on test set
+
+```{r}
+gbm_prediction_test <- predict(gbm_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(gbm_prediction_test, carsdataset_test$Carusage)
+```
+
+* Accuracy : 99.2%
+
+* Sensitivity : 90.0%     
+
+* Specificity : 100.0%
+
+* The accuracy of prediction is 99.2% with almost all non-users of a car predicted accurately. On the other hand, there is a 90.0% accuracy in predicting employees that will use a car. 
+
+#### 4.6.2 Gradient Boosting Variable Importance
+
+```{r}
+varImp(object = gbm_model)
+plot(varImp(object = gbm_model))
+```
+
+* With a threshold of 70, the most important variables include age and salary.
+
+### 4.7 Model_6: Xtreme Gradient boosting Machines 
+
+```{r}
+cv.ctrl <- trainControl(method = "repeatedcv", repeats = 1,number = 3, 
+                        summaryFunction = twoClassSummary,
+                        classProbs = TRUE,
+                        allowParallel=T)
+
+    xgb.grid <- expand.grid(nrounds = 500,
+                            eta = c(0.01),
+                            max_depth = c(2,4),
+                            gamma = 0,               #default=0
+                            colsample_bytree = 1,    #default=1
+                            min_child_weight = 1,    #default=1
+                            subsample = 1            #default=1
+    )
+
+    xgb_model <-train(Carusage~.,
+                     data=smote_carsdataset_train,
+                     method="xgbTree",
+                     trControl=cv.ctrl,
+                     tuneGrid=xgb.grid,
+                     verbose=T,
+                     nthread = 2
+    )
+```
+
+#### 4.7.1 Predict using the trained model & check performance on test set
+
+```{r}
+xgb_prediction_test <- predict(xgb_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(xgb_prediction_test, carsdataset_test$Carusage)
+```
+
+* Accuracy : 99.2%
+
+* Sensitivity : 90.0%     
+
+* Specificity : 100.0%
+
+* The accuracy of prediction is 99.2% with almost all non-users of a car predicted accurately. On the other hand, there is a 90.0% accuracy in predicting employees that will use a car. 
+
+#### 4.7.2 Xtreme Gradient Boosting Variable Importance
+
+```{r}
+varImp(object = xgb_model)
+plot(varImp(object = xgb_model))
+```
+
+* Here, with a threshold of 70, the only important variable is salary.
+
+## 5. Comparing Models
+
+```{r}
+models_to_compare <- list(KNN = knn_model,
+                   Naive_Bayes = nb_model,
+                   Logistic_Regression = slr_model,
+                   Random_Forest = rf_model,
+                   Gradient_Boosting = gbm_model,
+                   Xtreme_Gradient_Boosting = xgb_model)
+resamp <- resamples(models_to_compare)
+resamp
+summary(resamp)
+```
+
+```{r echo=FALSE}
+Name = c("KNN", "Naive_Bayes", "Logistic_Regression", "Random_Forest", "Gradient_Boosting", "Xtreme_Gradient_Boosting")
+Accuracy = c(0.97, 0.97, 0.98, 1.0, 0.99, 0.99)
+Sensitivity=c(0.80, 0.90, 0.90, 1.0, 0.90, 0.90)
+Specificity=c(0.99, 0.98, 0.99, 1.0, 1.0, 1.0)
+output = data.frame(Name, Accuracy, Sensitivity, Specificity)
+output
+```
+
+## 6. Conclusion 
+
+* The bagging algorithm known as random forest has the highest accuracy and sensitivity compared to every other model, and performs the best on our data.
+
+* Using the random forest model, all predictors influencing an employee's decision to use a car or not are work experience, age, salary, distance and those with a license. However, the most significant predictors using a threshold of 70 include work experience, age and salary.
+
+* From the comparison, bagging and boosting modelling procedures perform better than other model performance metrics such as KNN, naive bayes and logistic regression.
+
+* Using navie bayes as a benchmark, only the KNN model underperforms.
+
+* Due to low sensitivity on the KNN model, it can be tuned to see if it can outperform the naive bayes model. However, accuracy and specificity may be affected significantly.
+
+## 7. Appendix A – Source Code
+
+```
+#======================================================================= 
+# 
+# Exploratory Data Analysis - CardioGoodFitness 
+# 
+#=======================================================================
+
+# Environment set up and data import
+
+# Invoking libraries
+library(readr) # To import csv files
+library(ggplot2) # To create plots
+library(corrplot) # To plot correlation plot between numerical variables
+library(gridExtra) # To plot multiple ggplot graphs in a grid
+library(DataExplorer) # visual exploration of data
+library(caTools) # Split Data into Test and Train Set
+library(caret) # for confusion matrix function
+library(randomForest) # to build a random forest model
+library(rpart) # to build a decision model
+library(rattle) 
+library(gbm) # basic implementation using AdaBoost
+library(xgboost) # to build a XGboost model
+library(DMwR) # for sMOTE
+library(knitr) # Necessary to generate source codes from a .Rmd File
+library(markdown) # To convert to HTML
+library(rmarkdown) # To convret analyses into high quality documents
+
+# Set working directory 
+setwd("C:/Users/egwuc/Desktop/PGP-DSBA-UT Austin/Machine Learning/Week 5 - Project/")
+
+# Read input file
+cars_dataset <- read.csv("Cars-dataset.csv")
+
+# Global options settings
+options(scipen = 999) # turn off scientific notation like 1e+06
+
+# Check dimension of dataset 
+dim(cars_dataset)
+
+# Check first 6 rows(observations) of dataset
+head(cars_dataset)
+tail(cars_dataset)
+
+# Check structure of dataset
+str(cars_dataset)
+
+# Get summary of dataset
+summary(cars_dataset)
+
+# How many missing vaues do we have?
+sum(is.na(cars_dataset)) 
+
+# What columns contain missing values?
+colSums(is.na(cars_dataset))
+
+# Impute the missing value with the column mean/median
+data1 = cars_dataset
+data1$MBA[is.na(data1$MBA)] <- median(data1$MBA, na.rm = T)
+dim(data1)
+cars_dataset <- data1
+sum(is.na(cars_dataset))
+
+# Change Engineer, MBA and license to factor variable
+cars_dataset$Engineer <- as.factor(cars_dataset$Engineer)
+cars_dataset$MBA <- as.factor(cars_dataset$MBA)
+cars_dataset$license <- as.factor(cars_dataset$license)
+
+# View the dataset 
+View(cars_dataset)
+
+# Distribution of the dependent variable
+prop.table(table(cars_dataset$Transport))*100
+
+plot_histogram_n_boxplot = function(variable, variableNameString, binw){
+  
+  a <- ggplot(data = cars_dataset, aes(x = variable)) +
+    labs(x = variableNameString, y = 'count')+
+    geom_histogram(fill = 'green', col = 'white', binwidth = binw) +
+    geom_vline(aes(xintercept = mean(variable)),
+               color = "black", linetype = "dashed", size = 0.5)
+  
+  b <- ggplot(data = cars_dataset, aes('',variable))+ 
+    geom_boxplot(outlier.colour = 'red', col = 'red', outlier.shape = 19)+
+    labs(x = '', y = variableNameString) + coord_flip()
+  grid.arrange(a,b,ncol = 2)
+}
+
+plot_histogram_n_boxplot(cars_dataset$Age, 'Age', 2)
+
+plot_histogram_n_boxplot(cars_dataset$Work.Exp, 'Work Experience', 2)
+
+plot_histogram_n_boxplot(cars_dataset$Salary, 'Salary', 5)
+
+plot_histogram_n_boxplot(cars_dataset$Distance, 'Distance', 2)
+
+ggplot(cars_dataset, aes(x = Gender, fill = Transport)) + 
+  geom_bar(position = "dodge") + 
+  labs(y = "Count", 
+       fill = "Transport",
+       x = "Gender",
+       title = "Gender by Transport") +
+  theme_minimal()
+
+ggplot(cars_dataset, aes(x = Engineer, fill = Transport)) + 
+  geom_bar(position = "dodge") + 
+  labs(y = "Count", 
+       fill = "Transport",
+       x = "Engineer",
+       title = "Engineer by Transport") +
+  theme_minimal()
+
+ggplot(cars_dataset, aes(x = MBA, fill = Transport)) + 
+  geom_bar(position = "dodge") + 
+  labs(y = "Count", 
+       fill = "Transport",
+       x = "MBA",
+       title = "MBA by Transport") +
+  theme_minimal()
+
+ggplot(cars_dataset, aes(x = license, fill = Transport)) + 
+  geom_bar(position = "dodge") + 
+  labs(y = "Count", 
+       fill = "Transport",
+       x = "License",
+       title = "License by Transport") +
+  theme_minimal()
+
+# Numeric variables in the data
+num_vars = sapply(cars_dataset, is.numeric)
+
+# Correlation Plot
+corrplot(cor(cars_dataset[,num_vars]), method = 'number')
+
+# Distribution of the Transport variable
+prop.table(table(cars_dataset$Transport))*100
+
+# Adding a new column titled "Carusage"
+# Given we want to determine employees who use a car or not, we will use 
+# "Car" to represent "Car" and "Not Car" to represent "2Wheeler" and "Public Transport".
+cars_dataset$Carusage <- ifelse(cars_dataset$Transport == "Car", "Car", "Not.Car")
+table(cars_dataset$Carusage)
+prop.table(table(cars_dataset$Carusage))*100
+
+# The Carusage variable needs to be converted to a factor variable  
+cars_dataset$Carusage <- as.factor(cars_dataset$Carusage)
+summary(cars_dataset)
+
+# Remove the Transport variable
+cars_dataset <- cars_dataset[,-9]
+view(cars_dataset)
+
+# Split the data into train and test 
+set.seed(123)
+carsdataset_index <- createDataPartition(cars_dataset$Carusage, p = 0.70, list = FALSE)
+
+carsdataset_train <- cars_dataset[carsdataset_index,]
+carsdataset_test <- cars_dataset[-carsdataset_index,]
+
+prop.table(table(cars_dataset$Carusage))*100
+prop.table(table(carsdataset_train$Carusage))*100
+prop.table(table(carsdataset_test$Carusage))*100
+
+# Apply SMOTE on the Train dataset
+table(carsdataset_train$Carusage)
+prop.table(table(carsdataset_train$Carusage))*100
+
+smote_carsdataset_train <- SMOTE(Carusage ~ ., data = carsdataset_train,
+                     perc.over = 500,
+                     perc.under = 200,
+                     k = 5)
+
+table(smote_carsdataset_train$Carusage)
+prop.table(table(smote_carsdataset_train$Carusage))*100
+
+# perc.over	
+# how many extra cases from the minority class are generated (known as over-sampling)
+
+# smoted_minority_class = perc.over/100 * minority_class_cases + minority_class_cases
+
+# perc.under	
+# how many extra cases from the majority classes are selected for each case generated from the minority class (known as under-sampling)
+
+# k: number of nearest neighbours that are used to generate the new examples of the minority class.
+
+# Define the training control
+fitControl <- trainControl(
+              method = 'repeatedcv',           # k-fold cross validation
+              number = 3,                      # number of folds or k
+              repeats = 1,                     # repeated k-fold cross-validation
+              allowParallel = TRUE,
+              classProbs = TRUE,
+              summaryFunction = twoClassSummary # should class probabilities be returned
+    ) 
+
+knn_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                   preProcess = c("center", "scale"),
+                   method = "knn",
+                   tuneLength = 3,
+                   trControl = fitControl)
+knn_model
+
+knn_prediction_test <- predict(knn_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(knn_prediction_test, carsdataset_test$Carusage)
+
+varImp(object = knn_model)
+plot(varImp(object = knn_model))
+
+nb_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                 method = "naive_bayes",
+                 trControl = fitControl)
+
+summary(nb_model)
+
+nb_prediction_test <- predict(nb_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(nb_prediction_test, carsdataset_test$Carusage)
+
+varImp(object = nb_model)
+plot(varImp(object = nb_model))
+
+slr_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                 method = "glm",
+                 family = "binomial",
+                 trControl = fitControl)
+
+summary(slr_model)
+
+slr_prediction_test <- predict(slr_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(slr_prediction_test, carsdataset_test$Carusage)
+
+# se"N"sitivity : True "P"ositive rate
+# s"P"ecificity : True "N"egative rate
+
+varImp(object = slr_model)
+plot(varImp(object = slr_model))
+
+rf_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                     method = "rf",
+                     ntree = 30,
+                     maxdepth = 5,
+                     tuneLength = 10,
+                     trControl = fitControl)
+
+rf_prediction_test <- predict(rf_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(rf_prediction_test, carsdataset_test$Carusage)
+
+varImp(object = rf_model)
+plot(varImp(object = rf_model))
+
+gbm_model <- train(Carusage ~ ., data = smote_carsdataset_train,
+                     method = "gbm",
+                     trControl = fitControl,
+                     verbose = FALSE)
+
+gbm_prediction_test <- predict(gbm_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(gbm_prediction_test, carsdataset_test$Carusage)
+
+varImp(object = gbm_model)
+plot(varImp(object = gbm_model))
+
+cv.ctrl <- trainControl(method = "repeatedcv", repeats = 1,number = 3, 
+                        summaryFunction = twoClassSummary,
+                        classProbs = TRUE,
+                        allowParallel=T)
+
+    xgb.grid <- expand.grid(nrounds = 500,
+                            eta = c(0.01),
+                            max_depth = c(2,4),
+                            gamma = 0,               #default=0
+                            colsample_bytree = 1,    #default=1
+                            min_child_weight = 1,    #default=1
+                            subsample = 1            #default=1
+    )
+
+    xgb_model <-train(Carusage~.,
+                     data=smote_carsdataset_train,
+                     method="xgbTree",
+                     trControl=cv.ctrl,
+                     tuneGrid=xgb.grid,
+                     verbose=T,
+                     nthread = 2
+    )
+
+xgb_prediction_test <- predict(xgb_model, newdata = carsdataset_test, type = "raw")
+confusionMatrix(xgb_prediction_test, carsdataset_test$Carusage)
+
+varImp(object = xgb_model)
+plot(varImp(object = xgb_model))
+
+models_to_compare <- list(KNN = knn_model,
+                   Naive_Bayes = nb_model,
+                   Logistic_Regression = slr_model,
+                   Random_Forest = rf_model,
+                   Gradient_Boosting = gbm_model,
+                   Xtreme_Gradient_Boosting = xgb_model)
+resamp <- resamples(models_to_compare)
+resamp
+summary(resamp)
+
+Name = c("KNN", "Naive_Bayes", "Logistic_Regression", "Random_Forest", "Gradient_Boosting", "Xtreme_Gradient_Boosting")
+Accuracy = c(0.97, 0.97, 0.98, 1.0, 0.99, 0.99)
+Sensitivity=c(0.80, 0.90, 0.90, 1.0, 0.90, 0.90)
+Specificity=c(0.99, 0.98, 0.99, 1.0, 1.0, 1.0)
+output = data.frame(Name, Accuracy, Sensitivity, Specificity)
+output
+
+#======================================================================= 
+# 
+# T H E - E N D 
+# 
+#=======================================================================
+
+# Generate the .R file from this .Rmd to hold the source code 
+
+purl("Thera Bank Project.Rmd", documentation = 0)
+```
+
+```{r echo = FALSE}
+#======================================================================= 
+# 
+# T H E - E N D 
+# 
+#=======================================================================
+```
+
+
+*******************************************************************************
+
+Generate .R file from this Rmd. 
+The .R will contain only the R source code.
+
+```{r message = FALSE, results = 'hide'}
+# Generate the .R file from this .Rmd to hold the source code 
+
+purl("Cars Case Study.Rmd", documentation = 0)
+```
+
+To create word or pdf report -> click on Knit in the toolbar above, select knit to pdf.

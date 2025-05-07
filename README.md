@@ -1,20 +1,75 @@
-# Cars-Predictive-Modeling
+# 🚗 Employee Commute Mode Prediction
 
-This project requires an understanding of what mode of transport employees prefers to commute to their
-office. The dataset “Cars-dataset” includes employee information about their mode of transport as well as
-their personal and professional details like age, salary, work exp. We need to predict whether or not an
-employee will use Car as a mode of transport. Also, which variables are a significant predictor behind this
-decision.
-The following will be carried out through the assessment.
-- Perform an EDA on the data
-- Illustrate the insights based on EDA
-- What is the most challenging aspect of this problem? What method will you use to deal with this?
-- Prepare the data for analysis
-- Create multiple models and explore how each model perform using appropriate model performance metrics
-  - KNN
-  - Naive Bayes (is it applicable here? comment and if it is not applicable, how can you build an NB
-model in this case?)
-  - Logistic Regression
-- Apply both bagging and boosting modeling procedures to create 2 models and compare its accuracy
-with the best model of the above step.
-- Summarize your findings from the exercise in a concise yet actionable note
+A classification pipeline in R to predict whether an employee uses a **Car** vs **Not Car** for commuting, based on their personal and professional attributes.
+
+---
+
+## 📋 Project Overview
+
+- **Objective**: Build and compare models to predict an employee’s likelihood of commuting by **car**.  
+- **Dataset**: `Cars-dataset.csv` (418 records, 9 features + target):
+  - Numerical: Age, Work.Exp (years), Salary (₹ thousands), Distance (km)  
+  - Categorical (factors): Gender, Engineer, MBA, license  
+  - Target: `Transport` (2Wheeler, Car, Public Transport) → recoded to `Carusage` (Car / Not.Car)  
+
+---
+
+## 🗂️ Repository Structure
+
+├── data/
+│ └── Cars-dataset.csv # Raw input
+├── scripts/
+│ ├── 01_eda.R # EDA and visualization
+│ ├── 02_data_prep.R # Cleaning, feature engineering, SMOTE
+│ ├── 03_models.R # Model training and evaluation
+│ └── 04_compare_models.R # Resampling comparison and summary
+├── outputs/
+│ ├── plots/ # EDA & model diagnostic plots
+│ └── metrics.csv # Test-set metrics per model
+└── README.md # This file
+
+---
+
+## 🛠️ Setup & Dependencies
+
+1. **Install R (≥ 4.0)** and **RStudio**.  
+2. **Install required packages**:
+   ```r
+   install.packages(c(
+     "readr", "dplyr", "ggplot2", "gridExtra", "corrplot",
+     "DataExplorer", "caret", "DMwR", "randomForest", "gbm",
+     "xgboost", "e1071"
+   ))
+
+
+📈 Results Summary
+
+| Model                   | Accuracy  | Sensitivity | Specificity |
+| ----------------------- | --------- | ----------- | ----------- |
+| K-Nearest Neighbors     | 0.9758    | 0.80        | 0.9912      |
+| Naive Bayes             | 0.9758    | 0.90        | 0.9825      |
+| Logistic Regression     | 0.9839    | 0.90        | 0.9912      |
+| **Random Forest**       | **1.000** | **1.00**    | **1.00**    |
+| Gradient Boosting (GBM) | 1.000     | 1.00        | 1.00        |
+| XGBoost                 | 0.9919    | 0.90        | 1.00        |
+
+Best Performer: Random Forest (100% on all metrics)
+
+
+🔍 Key Takeaways
+- Salary, Age, Work Experience, Distance, and License status are the top predictors (via variable importance).
+- SMOTE effectively balanced the minority class before modeling.
+- Tree-based methods (Random Forest, GBM) outperformed linear models on this task.
+
+
+👤 Author
+
+Benedict Egwuchukwu
+
+Data Science & Analytics Practitioner
+
+📧 egwuchukwubenedict@yahoo.com
+
+
+
+

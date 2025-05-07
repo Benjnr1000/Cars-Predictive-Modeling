@@ -15,7 +15,7 @@ A classification pipeline in R to predict whether an employee uses a **Car** vs 
 ---
 
 ## 🗂️ Repository Structure
-
+```bash
 ├── data/
 │ └── Cars-dataset.csv # Raw input
 ├── scripts/
@@ -27,7 +27,7 @@ A classification pipeline in R to predict whether an employee uses a **Car** vs 
 │ ├── plots/ # EDA & model diagnostic plots
 │ └── metrics.csv # Test-set metrics per model
 └── README.md # This file
-
+```
 ---
 
 ## 🛠️ Setup & Dependencies
@@ -41,7 +41,6 @@ A classification pipeline in R to predict whether an employee uses a **Car** vs 
      "xgboost", "e1071"
    ))
 
-
 📈 Results Summary
 
 | Model                   | Accuracy  | Sensitivity | Specificity |
@@ -54,7 +53,6 @@ A classification pipeline in R to predict whether an employee uses a **Car** vs 
 | XGBoost                 | 0.9919    | 0.90        | 1.00        |
 
 Best Performer: Random Forest (100% on all metrics)
-
 
 🔍 Key Takeaways
 - Salary, Age, Work Experience, Distance, and License status are the top predictors (via variable importance).

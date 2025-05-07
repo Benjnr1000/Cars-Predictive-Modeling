@@ -56,7 +56,7 @@ A classification pipeline in R to predict whether an employee uses a **Car** vs 
 > Best Performer: Random Forest (100% on all metrics)
 
 
-🔍 Key Takeaways
+## 🔍 Key Takeaways
 - **Salary**, **Age**, **Work Experience**, **Distance**, and **License** status are the top predictors (via variable importance).
 - SMOTE effectively balanced the minority class before modeling.
 - Tree-based methods (Random Forest, GBM) outperformed linear models on this task.

@@ -40,6 +40,7 @@ A classification pipeline in R to predict whether an employee uses a **Car** vs 
      "DataExplorer", "caret", "DMwR", "randomForest", "gbm",
      "xgboost", "e1071"
    ))
+3. Place `Cars-dataset.csv` in the `data/` folder.
 
 📈 Results Summary
 
@@ -52,10 +53,11 @@ A classification pipeline in R to predict whether an employee uses a **Car** vs 
 | Gradient Boosting (GBM) | 1.000     | 1.00        | 1.00        |
 | XGBoost                 | 0.9919    | 0.90        | 1.00        |
 
-Best Performer: Random Forest (100% on all metrics)
+> Best Performer: Random Forest (100% on all metrics)
+
 
 🔍 Key Takeaways
-- Salary, Age, Work Experience, Distance, and License status are the top predictors (via variable importance).
+- **Salary**, **Age**, **Work Experience**, **Distance**, and **License** status are the top predictors (via variable importance).
 - SMOTE effectively balanced the minority class before modeling.
 - Tree-based methods (Random Forest, GBM) outperformed linear models on this task.
 
